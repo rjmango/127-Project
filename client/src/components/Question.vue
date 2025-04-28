@@ -90,6 +90,7 @@ export default{
   justify-content: center;
   padding-left: 60px;
   padding-right: 60px;
+  min-height: 100vh;
 }
 @media (max-width: 991px) {
   .profile-section {

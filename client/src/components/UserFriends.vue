@@ -132,20 +132,24 @@
           user.status = 'Following';
           this.following.push(user);
           this.notFollowedYet = this.notFollowedYet.filter( element => element.name !== user.name);
+
           axios.post("http://localhost:3000/follow", {follows: user.userID}, {withCredentials: true}).then( async (results) => {
             console.log(results);
           }).catch((error) => {
             console.log(error);
           });
+
         } else if (user.status === 'Following') {
           user.status = 'Follow';
           this.notFollowedYet.push(user);
           this.following = this.following.filter( element => element.name !== user.name);
+          
           axios.post("http://localhost:3000/unfollow", {follows: user.userID}, {withCredentials: true}).then( async (results) => {
             console.log(results);
           }).catch((error) => {
             console.log(error);
           });
+          
         }
         console.log(this.following);
         console.log(this.notFollowedYet);

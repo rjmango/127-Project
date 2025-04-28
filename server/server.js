@@ -10,7 +10,7 @@ app.use(cors({
         credentials: true,
         origin: "http://localhost:8080",
     }));
-app.use('/', router)
+app.use('/', router);
 const PORT = 3000;
 
 app.listen(PORT, ()=>{

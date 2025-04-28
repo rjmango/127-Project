@@ -47,43 +47,48 @@
 
         <!-- Question Section -->
         <section class="container" v-for="question in userQuestions" :key="question.AnswerID">
-      <header class="header-name">
-        <h1 class="question">Anonymous asked:
-          <div class="header-question">{{ question.Question_content }}</div>
-        </h1>
-        <figure class="profile-pic" alt="">
-          <img class="sender-profile" src = "@/assets/sender-profile.jpg"/>
-        </figure>
-      </header>
+          <v-icon name = "bi-trash-fill"
+            scale = "1.5"
+            animation = "wrench" 
+            hover = 'true'
+            @click="deleteAnswer(question)"/>
+          <header class="header-name">
+            <h1 class="question">Anonymous asked:
+            <div class="header-question">{{ question.Question_content }}</div>
+            </h1>
+            <figure class="profile-pic" alt="">
+              <img class="sender-profile" src = "@/assets/sender-profile.jpg"/>
+            </figure>
+          </header>
   
-      <article class="post-name">
-      <figure class="user-pic" alt="">
-        <img class="user-profile" src = "@/assets/profile-picture.png"/>
-      </figure>
-      <h2 class="answer">{{ firstName }} {{ lastName }}
-        <div class="post-answer"> {{ question.Answer_content }} </div>
-      </h2>
-      </article>
+          <article class="post-name">
+            <figure class="user-pic" alt="">
+              <img class="user-profile" src = "@/assets/profile-picture.png"/>
+            </figure>
+            <h2 class="answer">{{ firstName }} {{ lastName }}
+              <div class="post-answer"> {{ question.Answer_content }} </div>
+            </h2>
+          </article>
   
   
-      <section class="post-details">
-        <div class="image-stats">
-          <div class="image-container">
-            <img src="@/assets/heart.svg" alt="Image description" class="image" />
-            <span class="stat">{{ question.Likes }}</span>
-          </div>
+          <section class="post-details">
+            <div class="image-stats">
+              <div class="image-container">
+                <img src="@/assets/heart.svg" alt="Image description" class="image" />
+                <span class="stat">{{ question.Likes }}</span>
+              </div>
                       
-          <div class="image-container">
-            <img src="@/assets/comment-logo.svg" alt="Image description" class="image" />
-            <span class="stat">0</span>
-          </div>
-        </div>
-        <time datetime="yyyy-mm-dd" class="date">{{ question.Date_answered }}</time>
-      </section>
+              <div class="image-container">
+                <img src="@/assets/comment-logo.svg" alt="Image description" class="image" />
+                <span class="stat">0</span>
+              </div>
+            </div>
+            <time datetime="yyyy-mm-dd" class="date">{{ question.Date_answered }}</time>
+          </section>
   
-      <hr class="divider" />
-      <textarea v-if="this.$store.getters.isAuthenticated" class="comment-box" placeholder="Share your thoughts."></textarea>
-    </section>
+          <hr class="divider" />
+          <textarea v-if="this.$store.getters.isAuthenticated" class="comment-box" placeholder="Share your thoughts."></textarea>
+        </section>
     
       </section>
       
@@ -93,13 +98,14 @@
   
   <script>
   import axios from 'axios'
+  import {reactive} from 'vue'
   export default {
     name: "UserProfile",
     data() {
       return {
         refreshed: false,
         userData: "",
-        userQuestions: [],
+        userQuestions: reactive([]),
         editMode: false,
         firstName:"Log in",
         lastName: "to continue"
@@ -122,7 +128,7 @@
         });
         document.querySelector('.edit-profile-btn').innerText = 'Edit Profile';
       }
-    },
+      },
       deleteProfile() {
         axios.delete('http://localhost:3000/user', { withCredentials: true }).then( async (result) => {
           console.log(result.data);
@@ -132,6 +138,14 @@
           console.log(error);
         });
         alert("Profile deleted!");
+      },
+      deleteAnswer(answer){
+        this.userQuestions = this.userQuestions.filter( element => element.AnswerID != answer.AnswerID);
+        axios.delete(`http://localhost:3000/answer/${answer.AnswerID}`).then((result)=>{
+          console.log(result.data);
+        }).catch(error =>{
+          console.log(error);
+        })
       }
     },
     computed:{
@@ -140,10 +154,6 @@
       }
     },
     mounted(){
-        // if(!this.refreshed){
-        //   this.$router.go();
-        //   this.refreshed = !this.refreshed
-        // }
         if(this.$route.meta.userLogged){
           axios.get("http://localhost:3000/user", {withCredentials: true}).then((result) => {
               console.log(result.data);
@@ -170,7 +180,7 @@
               alert("User not found")
               this.$router.push('/home');
           });
-          axios.get(`http://localhost:3000/answers/${id}`, {withCredentials: true}).then((result) => {
+          axios.get(`http://localhost:3000/answers`, {withCredentials: true}).then((result) => {
               console.log(result.data);
               this.userQuestions = result.data;
           }).catch((error) => {

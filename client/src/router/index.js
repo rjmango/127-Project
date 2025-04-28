@@ -4,6 +4,7 @@ import RegisterView from '@/views/RegisterView.vue'
 import HomeView from '@/views/HomeView.vue'
 import QuestionView from '@/views/QuestionView.vue'
 import FriendsView from '@/views/FriendsView.vue'
+import UserView from '@/views/UserView.vue'
 
 const routes = [
   {
@@ -33,7 +34,7 @@ const routes = [
   {
     path: '/user/:id',
     name: 'user',
-    component: HomeView,
+    component: UserView,
   },
   {
     path: '/questions',

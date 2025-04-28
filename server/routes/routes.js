@@ -89,7 +89,8 @@ router.get("/answers", async (req, res) => {
                     (SELECT userID, Username
                     FROM splook.user_info) person
             ON ans.SenderID = person.userID
-            WHERE ReceiverID = ${claims.id};`
+            WHERE ReceiverID = ${claims.id}
+            ORDER BY Date_answered DESC;`
     
         connection.execute(prompt, (err, result, field) => {
             if (err) console.error(err.stack);
@@ -138,7 +139,8 @@ router.get("/questions", async (req, res) =>{
 
         const prompt = `SELECT *
         FROM splook.question_info
-        WHERE ReceiverID = ${claims.id};`;
+        WHERE ReceiverID = ${claims.id}
+        ORDER BY Date_submitted DESC;`;
     
         connection.execute(prompt, (err, result, field) => {
             if (err) console.error(err.stack);
@@ -274,9 +276,20 @@ router.delete("/user", async (req, res) => {
             message: "Deleted Succesfully"
         });
     }catch{
-
     }
 });
+
+router.delete("/answer/:ID", async(req,res) => {
+    const prompt = `DELETE FROM splook.answer_info 
+    WHERE (AnswerID = ${req.params.ID});`
+    connection.execute(prompt, (err, results,fields) => {
+        if (err) console.error(err.stack);
+        console.log(results);
+    });
+    res.send({
+        message: "Deleted Succesfully"
+    });
+})
 
 router.post("/unfollow", async(req, res) => {
     try{
