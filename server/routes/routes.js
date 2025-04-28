@@ -28,7 +28,7 @@ router.get("/", async (req, res) => {
 router.get('/user', async (req, res) => {
     try{
         const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, 'secretKey');
+        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
     
         // Check if not authenticated
         if(!claims) {
@@ -74,7 +74,7 @@ router.get('/user/:id', async (req, res) => {
 router.get("/answers", async (req, res) => {
     try{
         const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, 'secretKey');
+        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
     
         // Check if not authenticated
         if(!claims) {
@@ -128,7 +128,7 @@ router.get("/logout", async (req, res) =>{
 router.get("/questions", async (req, res) =>{
     try{
         const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, 'secretKey');
+        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
     
         // Check if not authenticated
         if(!claims) {
@@ -156,7 +156,7 @@ router.get("/questions", async (req, res) =>{
 router.get("/friends", async (req, res) =>{
     try{
         const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, 'secretKey');
+        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
     
         // Check if not authenticated
         if(!claims) {
@@ -213,7 +213,7 @@ router.get("/friends", async (req, res) =>{
 router.post("/edit", async(req, res) => {
     try{
         const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, 'secretKey');
+        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
     
         // Check if not authenticated
         if(!claims) {
@@ -243,7 +243,7 @@ router.post("/edit", async(req, res) => {
 router.delete("/user", async (req, res) => {
     try{
         const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, 'secretKey');
+        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
 
         // Check if not authenticated
         if(!claims) {
@@ -294,7 +294,7 @@ router.delete("/answer/:ID", async(req,res) => {
 router.post("/unfollow", async(req, res) => {
     try{
         const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, 'secretKey');
+        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
     
         // Check if not authenticated
         if(!claims) {
@@ -322,7 +322,7 @@ router.post("/unfollow", async(req, res) => {
 router.post("/follow", async(req, res) => {
     try{
         const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, 'secretKey');
+        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
     
         // Check if not authenticated
         if(!claims) {
@@ -405,12 +405,12 @@ router.post("/login", async (req,res) =>{
             return res.status(400).send({ message: `Invalid password`});
         }
 
-        const token = jwt.sign({id: user.userID}, "secretKey");
+        const token = jwt.sign({id: user.userID}, process.env.JWT_SECRET);
         
         try{
             res.cookie('jwt', token, {
                 httpOnly: true,
-                maxAge: 24 * 60 * 60 * 1000
+                maxAge: process.env.JWT_MAX_AGE,
             });
         }catch(e){
             console.log(e)
@@ -422,7 +422,7 @@ router.post("/login", async (req,res) =>{
 router.post('/answer', (req,res) => {
     try{
         const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, 'secretKey');
+        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
 
         // Check if not authenticated
         if(!claims) {
@@ -466,7 +466,7 @@ router.post('/answer', (req,res) => {
 router.post('/question', (req,res) => {
     try{
         const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, 'secretKey');
+        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
 
         // Check if not authenticated
         if(!claims) {
