@@ -19,12 +19,10 @@ cd anon-qa-app
 
 # 2. Install dependencies
 (client)
-cd client
-npm install
+npm install --prefix /client
 
 (server)
-cd ../server
-npm install
+npm install --prefix /server
 
 # 3. Setup environment
 cp client/.env.example client/.env
