@@ -18,10 +18,10 @@ git clone https://github.com/yourusername/anon-qa-app.git
 cd anon-qa-app
 
 # 2. Install dependencies
-(client)
+# (client)
 npm install --prefix /client
 
-(server)
+# (server)
 npm install --prefix /server
 
 # 3. Setup environment
