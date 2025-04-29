@@ -30,4 +30,10 @@ cp server/.env.example server/.env
 # Edit the .env files
 
 # 4. Run development servers
-npm run dev
+(On your terminal)
+npm start client
+
+(On a separate terminal)
+npm start server
+
+Note: make sure both terminals are in the root directory of the project.
