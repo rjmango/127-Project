@@ -21,21 +21,27 @@ router.get("/", authenticate , async (req, res) => {
 router.get('/user', authenticate , async (req, res) => {
     try{
         const claims = req.user; // Get user claims from middleware
+
+        const prompt = `
+            SELECT 
+            *,
+            (SELECT COUNT(*) FROM following_info WHERE userID = ?) AS Following,
+            (SELECT COUNT(*) FROM following_info WHERE follows = ?) AS Followers
+            FROM user_info
+            WHERE userID = ?;
+        `;
+
+        const queryParams = [claims.id, claims.id, claims.id];
         
-        const prompt = `SELECT *, 
-        (SELECT COUNT(*) FROM splook.following_info WHERE userID = ${claims.id}) AS Following, 
-        (SELECT COUNT(*) FROM splook.following_info WHERE FOLLOWS =  ${claims.id}) AS Followers
-        FROM splook.user_info
-        WHERE userID =  ${claims.id};`
-        
-        connection.execute(prompt, (err, result, field) => {
+        connection.execute(prompt, queryParams, async (err, result, field) => {
             if (err){
                 console.error(err.stack);
             }
             const [user] = result
             const {Password, ...userInfo} = user;
-            res.json(userInfo);    
+            res.json(userInfo);
         });
+
     }catch{
         return res.status(500).send({
             message: "Internal Server Error"
@@ -45,11 +51,14 @@ router.get('/user', authenticate , async (req, res) => {
 
 router.get('/user/:id', authenticate, async (req, res) => {
     const prompt = `SELECT *, 
-    (SELECT COUNT(*) FROM splook.following_info WHERE userID = ${req.params.id}) AS Following, 
-    (SELECT COUNT(*) FROM splook.following_info WHERE FOLLOWS =  ${req.params.id}) AS Followers
+    (SELECT COUNT(*) FROM splook.following_info WHERE userID = ?) AS Following, 
+    (SELECT COUNT(*) FROM splook.following_info WHERE FOLLOWS =  ?) AS Followers
     FROM splook.user_info
-    WHERE userID =  ${req.params.id};`
-    connection.execute(prompt, (err, result, field) => {
+    WHERE userID = ?;`
+
+    const queryParams = [req.params.id, req.params.id, req.params.id];
+    
+    connection.execute(prompt, queryParams, (err, result, field) => {
         if (err){
             return res.status(410).message({
                 message: "User not found"
@@ -71,10 +80,12 @@ router.get("/answers", authenticate , async (req, res) => {
                     (SELECT userID, Username
                     FROM splook.user_info) person
             ON ans.SenderID = person.userID
-            WHERE ReceiverID = ${claims.id}
-            ORDER BY Date_answered DESC;`
-    
-        connection.execute(prompt, (err, result, field) => {
+            WHERE ReceiverID = ?
+            ORDER BY Date_answered DESC;`;
+        
+        const queryParams = [claims.id];
+
+        connection.execute(prompt, queryParams, (err, result, field) => {
             if (err){
                 console.error(err.stack);
                 return res.status(410).send({
@@ -97,14 +108,15 @@ router.get("/answers/:id", authenticate, async (req, res) => {
                 (SELECT userID, Username
                 FROM splook.user_info) person
         ON ans.SenderID = person.userID
-        WHERE ReceiverID = ${req.params.id};`
+        WHERE ReceiverID = ?;`
 
-    connection.execute(prompt, (err, result, field) => {
+    const queryParams = [req.params.id];
+
+    connection.execute(prompt, queryParams, (err, result, field) => {
         if (err) console.error(err.stack);
         res.json(result);    
     });
 });
-
 
 router.get("/logout", authenticate , async (req, res) =>{
     const cookie = req.cookies['jwt'];
@@ -118,16 +130,18 @@ router.get("/questions", authenticate ,async (req, res) =>{
 
         const prompt = `SELECT *
         FROM splook.question_info
-        WHERE ReceiverID = ${claims.id}
+        WHERE ReceiverID = ?
         ORDER BY Date_submitted DESC;`;
+
+        const queryParams = [claims.id];
     
-        connection.execute(prompt, (err, result, field) => {
+        connection.execute(prompt, queryParams, (err, result, field) => {
             if (err) console.error(err.stack);
             res.json(result);    
         });
     } catch{
-        return res.status(401).send({
-            message: "unauthenticated"
+        return res.status(500).send({
+            message: "Internal Server Error"
         })
     }
 });
@@ -135,49 +149,49 @@ router.get("/questions", authenticate ,async (req, res) =>{
 router.get("/friends", authenticate, async (req, res) =>{
     try{
         const claims = req.user;
-    
+
         const friendPrompt = `SELECT u.userID, First_Name AS name, username
         FROM splook.following_info f JOIN splook.user_info u
         ON f.Follows = u.UserID
-        WHERE f.UserID = ${claims.id} AND Follows IN 
+        WHERE f.UserID = ? AND Follows IN 
         (SELECT UserID
         FROM splook.following_info
-        WHERE Follows = ${claims.id});`;
-
+        WHERE Follows = ?);`;
+        
         const followingPrompt = `SELECT u.userID, First_Name AS name, username
-            FROM splook.following_info f JOIN splook.user_info u
-            ON Follows = u.userID
-            WHERE f.userID = ${claims.id};`;
+        FROM splook.following_info f JOIN splook.user_info u
+        ON Follows = u.userID
+        WHERE f.userID = ?;`;
          
         const lastPrompt = `SELECT userID, First_Name AS name, username
             FROM splook.user_info
-            WHERE userID != ${claims.id} AND userID NOT IN (
+            WHERE userID != ? AND userID NOT IN (
             SELECT Follows
             FROM splook.following_info
-            WHERE UserID = ${claims.id});`;
-        
+            WHERE UserID = ?);`;
+
+        const queryParams = [claims.id, claims.id];
+
         const output = {
             following: [],
             friends: [],
             others: []
         };
 
-        connection.execute(friendPrompt, (err, result1, field) => {
+        connection.execute(friendPrompt, queryParams, (err, result1, field) => {
             if (err) console.error(err.stack);
             output.friends = result1;
-            connection.execute(followingPrompt, (err, result2, field) => {
+            connection.execute(followingPrompt, [claims.id], (err, result2, field) => {
                 output.following = result2;
-                connection.execute(lastPrompt, (err, result3, field) => {
+                connection.execute(lastPrompt, queryParams, (err, result3, field) => {
                     output.others = result3;
                     res.json(output);    
                 });
             });
         });
-
-
     } catch{
-        return res.status(401).send({
-            message: "unauthenticated"
+        return res.status(500).send({
+            message: "Internal Server Error"
         })
     }    
 });
@@ -187,10 +201,13 @@ router.post("/edit", authenticate, async(req, res) => {
         const claims = req.user; 
     
         const prompt = `UPDATE splook.user_info
-        SET First_Name = '${req.body.firstName}',
-            Last_Name = '${req.body.lastName}'
-            WHERE (userID = '${claims.id}');`;
-        connection.execute(prompt, (err, results, field) => {
+        SET First_Name = ?,
+            Last_Name = ?
+            WHERE (userID = ?);`;
+
+        const queryParams = [req.body.firstName, req.body.lastName, claims.id];
+
+        connection.execute(prompt, queryParams, (err, results, field) => {
             if(err) console.log(err)
             return res.json({
                 message: "Edit successful"
@@ -199,8 +216,8 @@ router.post("/edit", authenticate, async(req, res) => {
 
     }catch(error){
         console.log(error);
-        return res.status(401).send({
-            message: "unauthenticated"
+        return res.status(500).send({
+            message: "Internal Server Error"
         })
     }
 });
@@ -209,25 +226,27 @@ router.delete("/user", authenticate, async (req, res) => {
     try{
         const claims = req.user;
 
-        connection.execute(`DELETE FROM splook.user_info WHERE userID = ${claims.id}`, (err, results,fields) => {
+        const queryParams = [claims.id];
+        connection.execute(`DELETE FROM splook.user_info WHERE userID = ?`, queryParams , (err, results,fields) => {
             if (err) console.error(err.stack);
             console.log(results);
         });
     
-        connection.execute(`DELETE FROM splook.answer_info WHERE ReceiverID = ${claims.id}`, (err, results,fields) => {
+        connection.execute(`DELETE FROM splook.answer_info WHERE ReceiverID = ?`, queryParams, (err, results,fields) => {
             if (err) console.error(err.stack);
             console.log(results);
         });
     
-        connection.execute(`DELETE FROM splook.question_info WHERE ReceiverID = ${claims.id}`, (err, results,fields) => {
+        connection.execute(`DELETE FROM splook.question_info WHERE ReceiverID = ?`, queryParams, (err, results,fields) => {
             if (err) console.error(err.stack);
             console.log(results);
         });
 
-        connection.execute(`DELETE FROM splook.following_info WHERE Follows = ${claims.id}`, (err, results,fields) => {
+        connection.execute(`DELETE FROM splook.following_info WHERE Follows = ? OR UserID = ?`, [claims.id, claims.id], (err, results,fields) => {
             if (err) console.error(err.stack);
             console.log(results);
         });
+
         res.cookie('jwt', '' ,{  httpOnly: true, expires: new Date(0) });
         res.send({
             message: "Deleted Succesfully"
@@ -239,10 +258,14 @@ router.delete("/user", authenticate, async (req, res) => {
     }
 });
 
-router.delete("/answer/:ID", authenticate, async(req,res) => {
+router.delete("/answer/:id", authenticate, async (req,res) => {
+
     const prompt = `DELETE FROM splook.answer_info 
-    WHERE (AnswerID = ${req.params.ID});`
-    connection.execute(prompt, (err, results,fields) => {
+    WHERE (AnswerID = ?);`
+
+    const queryParams = [ req.params.id ];
+    
+    connection.execute(prompt, queryParams, (err, results,fields) => {
         if (err) console.error(err.stack);
         console.log(results);
     });
@@ -254,11 +277,11 @@ router.delete("/answer/:ID", authenticate, async(req,res) => {
 router.post("/unfollow", authenticate, async(req, res) => {
     try{
         const claims = req.user;
-
-        const prompt = `DELETE FROM splook.following_info WHERE (UserID = '${claims.id}') and (Follows = '${req.body.follows}')`;
-
-        connection.execute(prompt, (err, results, fields) => {
+        const prompt = `DELETE FROM splook.following_info WHERE (UserID = ?) and (Follows = ?)`;
+        const queryParams = [claims.id, req.body.follows];
+        connection.execute(prompt, queryParams, (err, results, fields) => {
             if (err) console.error(err);
+            console.log(results);
             res.send({
                 message: "Delete successfully"
             })
@@ -275,10 +298,11 @@ router.post("/follow", authenticate, async(req, res) => {
     try{
         const claims = req.user;
     
-        const prompt = `INSERT INTO splook.following_info VALUES ('${claims.id}', '${req.body.follows}')`;
+        const prompt = `INSERT INTO splook.following_info VALUES (?, ?)`;
+        const queryParams = [claims.id, req.body.follows];
         
         console.log(prompt);
-        connection.execute(prompt, (err, results, fields) => {
+        connection.execute(prompt,  queryParams, (err, results, fields) => {
             if(err) console.error(err);
             res.send(results);
         });
@@ -338,7 +362,8 @@ router.post("/register", async (req, res) =>{
 });
 
 router.post("/login", async (req,res) =>{
-    connection.execute(`SELECT * FROM splook.user_info WHERE Username = '${req.body.username}'`, async (err, results, fields) => {
+    const queryParams = [ req.body.username];
+    connection.execute(`SELECT * FROM splook.user_info WHERE Username = ?`, queryParams, async (err, results, fields) => {
         if (results.length === 0){
             return res.status(404).send({ message: "Username not found"});
         }
@@ -385,8 +410,9 @@ router.post('/answer', authenticate, (req,res) => {
         };
         
         const prompt = `INSERT INTO splook.answer_info (QuestionID, ReceiverID, SenderID, Likes, Date_answered, Answer_content) 
-        VALUES ('${newQuestion.QuestionID}', '${newQuestion.ReceiverID}', '${newQuestion.SenderID}', '${newQuestion.Likes}', '${newQuestion.Date_answered}', '${newQuestion.Answer_content}');`;
-        connection.execute(prompt, (err, results, fields) => {
+        VALUES (?, ?, ?, ?, ?, ?);`;
+        const queryParams = [newQuestion.QuestionID, newQuestion.ReceiverID, newQuestion.SenderID, newQuestion.Likes, newQuestion.Date_answered, newQuestion.Answer_content];
+        connection.execute(prompt, queryParams, (err, results, fields) => {
             if (err) console.error(err);
             console.log(results);
         })
@@ -420,8 +446,10 @@ router.post('/question', authenticate, (req,res) => {
         };
 
         const prompt = `INSERT INTO splook.question_info (ReceiverID, SenderID, Date_submitted, Sender_anonymity, Question_content)
-        VALUES ( '${newUser.ReceiverID}', '${newUser.SenderID}', '${newUser.Date}', '${newUser.Anon}', '${newUser.Content}');`;
-        connection.execute(prompt, (err, results, fields) => {
+        VALUES ( ?, ?, ?, ?, ?);`;
+
+        const queryParams = [newUser.ReceiverID, newUser.SenderID, newUser.Date, newUser.Anon, newUser.Content];
+        connection.execute(prompt, queryParams, (err, results, fields) => {
             if (err) console.error(err);
             console.log(results);
         })

@@ -141,11 +141,11 @@
       },
       deleteAnswer(answer){
         this.userQuestions = this.userQuestions.filter( element => element.AnswerID != answer.AnswerID);
-        axios.delete(`http://localhost:3000/answer/${answer.AnswerID}`).then((result)=>{
+        axios.delete(`http://localhost:3000/answer/${answer.AnswerID}`, { withCredentials: true }).then((result)=>{
           console.log(result.data);
         }).catch(error =>{
           console.log(error);
-        })
+        });
       }
     },
     computed:{
@@ -161,7 +161,7 @@
               this.firstName = result.data.First_Name
               this.lastName = result.data.Last_Name
           }).catch((error) => {
-              console.log(error)
+              console.log(error);
           });
           axios.get("http://localhost:3000/answers", {withCredentials: true}).then((result) => {
               console.log(result.data);
@@ -180,7 +180,7 @@
               alert("User not found")
               this.$router.push('/home');
           });
-          axios.get(`http://localhost:3000/answers`, {withCredentials: true}).then((result) => {
+          axios.get(`http://localhost:3000/answers/${id}`, {withCredentials: true}).then((result) => {
               console.log(result.data);
               this.userQuestions = result.data;
           }).catch((error) => {
