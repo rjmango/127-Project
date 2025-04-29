@@ -1,20 +1,13 @@
 import express from "express";
 import connection from './../db/connections.js';
+import authenticate from '../middleware/authMiddleware.js';
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-router.get("/", async (req, res) => {
-    try{
-        const cookie = req.cookies['jwt'];
-        
-        if(!cookie) {
-            return res.status(401).send({
-                message: "unauthenticated"
-            });
-        }
-        
+router.get("/", authenticate , async (req, res) => {
+    try{        
         return res.send({
             message: "Logged in"
         });
@@ -25,63 +18,52 @@ router.get("/", async (req, res) => {
     }
 });
 
-router.get('/user', async (req, res) => {
+router.get('/user', authenticate , async (req, res) => {
     try{
-        const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
-    
-        // Check if not authenticated
-        if(!claims) {
-            return res.status(401).send({
-                message: "unauthenticated"
-            })
-        }
+        const claims = req.user; // Get user claims from middleware
         
         const prompt = `SELECT *, 
         (SELECT COUNT(*) FROM splook.following_info WHERE userID = ${claims.id}) AS Following, 
         (SELECT COUNT(*) FROM splook.following_info WHERE FOLLOWS =  ${claims.id}) AS Followers
         FROM splook.user_info
         WHERE userID =  ${claims.id};`
+        
         connection.execute(prompt, (err, result, field) => {
-            if (err) console.error(err.stack);
+            if (err){
+                console.error(err.stack);
+            }
             const [user] = result
             const {Password, ...userInfo} = user;
             res.json(userInfo);    
-        })
+        });
     }catch{
-        return res.status(401).send({
-            message: "unauthenticated"
+        return res.status(500).send({
+            message: "Internal Server Error"
         })
     }
 });
 
-router.get('/user/:id', async (req, res) => {
+router.get('/user/:id', authenticate, async (req, res) => {
     const prompt = `SELECT *, 
     (SELECT COUNT(*) FROM splook.following_info WHERE userID = ${req.params.id}) AS Following, 
     (SELECT COUNT(*) FROM splook.following_info WHERE FOLLOWS =  ${req.params.id}) AS Followers
     FROM splook.user_info
     WHERE userID =  ${req.params.id};`
     connection.execute(prompt, (err, result, field) => {
-        if (err) res.status(410).message({
-            message: "User not found"
+        if (err){
+            return res.status(410).message({
+                message: "User not found"
             });
+        }
         const [user] = result
         const {Password, ...userInfo} = user;
         res.json(userInfo);    
     });
 });
 
-router.get("/answers", async (req, res) => {
+router.get("/answers", authenticate , async (req, res) => {
     try{
-        const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
-    
-        // Check if not authenticated
-        if(!claims) {
-            return res.status(401).send({
-                message: "unauthenticated"
-            })
-        }
+        const claims = req.user;
 
         const prompt = `SELECT *
             FROM (SELECT * 
@@ -93,17 +75,22 @@ router.get("/answers", async (req, res) => {
             ORDER BY Date_answered DESC;`
     
         connection.execute(prompt, (err, result, field) => {
-            if (err) console.error(err.stack);
+            if (err){
+                console.error(err.stack);
+                return res.status(410).send({
+                    message: "Entry not found"
+                });
+            }
             res.json(result);    
         });
     } catch{
         return res.status(401).send({
             message: "unauthenticated"
-        })
+        });
     }
 });
 
-router.get("/answers/:id", async (req, res) => {
+router.get("/answers/:id", authenticate, async (req, res) => {
     const prompt = `SELECT *
         FROM (SELECT * 
                 FROM splook.answer_info NATURAL JOIN splook.question_info ) ans JOIN
@@ -119,23 +106,15 @@ router.get("/answers/:id", async (req, res) => {
 });
 
 
-router.get("/logout", async (req, res) =>{
+router.get("/logout", authenticate , async (req, res) =>{
     const cookie = req.cookies['jwt'];
     res.cookie('jwt', '' ,{  httpOnly: true, expires: new Date(0) });
     res.send({message: "Logout successfully"});
 });
 
-router.get("/questions", async (req, res) =>{
+router.get("/questions", authenticate ,async (req, res) =>{
     try{
-        const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
-    
-        // Check if not authenticated
-        if(!claims) {
-            return res.status(401).send({
-                message: "unauthenticated"
-            })
-        }
+        const claims = req.user;
 
         const prompt = `SELECT *
         FROM splook.question_info
@@ -153,17 +132,10 @@ router.get("/questions", async (req, res) =>{
     }
 });
 
-router.get("/friends", async (req, res) =>{
+router.get("/friends", authenticate, async (req, res) =>{
     try{
-        const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
+        const claims = req.user;
     
-        // Check if not authenticated
-        if(!claims) {
-            return res.status(401).send({
-                message: "unauthenticated"
-            })
-        }
         const friendPrompt = `SELECT u.userID, First_Name AS name, username
         FROM splook.following_info f JOIN splook.user_info u
         ON f.Follows = u.UserID
@@ -210,17 +182,10 @@ router.get("/friends", async (req, res) =>{
     }    
 });
 
-router.post("/edit", async(req, res) => {
+router.post("/edit", authenticate, async(req, res) => {
     try{
-        const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
+        const claims = req.user; 
     
-        // Check if not authenticated
-        if(!claims) {
-            return res.status(401).send({
-                message: "unauthenticated"
-            });
-        }
         const prompt = `UPDATE splook.user_info
         SET First_Name = '${req.body.firstName}',
             Last_Name = '${req.body.lastName}'
@@ -240,17 +205,9 @@ router.post("/edit", async(req, res) => {
     }
 });
 
-router.delete("/user", async (req, res) => {
+router.delete("/user", authenticate, async (req, res) => {
     try{
-        const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
-
-        // Check if not authenticated
-        if(!claims) {
-            return res.status(401).send({
-                message: "unauthenticated"
-            })
-        }
+        const claims = req.user;
 
         connection.execute(`DELETE FROM splook.user_info WHERE userID = ${claims.id}`, (err, results,fields) => {
             if (err) console.error(err.stack);
@@ -276,10 +233,13 @@ router.delete("/user", async (req, res) => {
             message: "Deleted Succesfully"
         });
     }catch{
+        res.status(500).send({
+            message: "Internal Server Error"  
+        });
     }
 });
 
-router.delete("/answer/:ID", async(req,res) => {
+router.delete("/answer/:ID", authenticate, async(req,res) => {
     const prompt = `DELETE FROM splook.answer_info 
     WHERE (AnswerID = ${req.params.ID});`
     connection.execute(prompt, (err, results,fields) => {
@@ -289,19 +249,11 @@ router.delete("/answer/:ID", async(req,res) => {
     res.send({
         message: "Deleted Succesfully"
     });
-})
+});
 
-router.post("/unfollow", async(req, res) => {
+router.post("/unfollow", authenticate, async(req, res) => {
     try{
-        const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
-    
-        // Check if not authenticated
-        if(!claims) {
-            return res.status(401).send({
-                message: "unauthenticated"
-            })
-        }
+        const claims = req.user;
 
         const prompt = `DELETE FROM splook.following_info WHERE (UserID = '${claims.id}') and (Follows = '${req.body.follows}')`;
 
@@ -313,23 +265,16 @@ router.post("/unfollow", async(req, res) => {
         });
     }catch{
         console.log("NOT FOUND");
-        return res.status(401).send({
-            message: "unauthenticated"
+        return res.status(500).send({
+            message: "Internal Server Error"
         })
     }
 });
 
-router.post("/follow", async(req, res) => {
+router.post("/follow", authenticate, async(req, res) => {
     try{
-        const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
+        const claims = req.user;
     
-        // Check if not authenticated
-        if(!claims) {
-            return res.status(401).send({
-                message: "unauthenticated"
-            });
-        }
         const prompt = `INSERT INTO splook.following_info VALUES ('${claims.id}', '${req.body.follows}')`;
         
         console.log(prompt);
@@ -338,8 +283,8 @@ router.post("/follow", async(req, res) => {
             res.send(results);
         });
     }catch{
-        return res.status(401).send({
-            message: "unauthenticated"
+        return res.status(500).send({
+            message: "Internal Server Error"
         })
     }
 });
@@ -419,17 +364,9 @@ router.post("/login", async (req,res) =>{
     })
 });
 
-router.post('/answer', (req,res) => {
+router.post('/answer', authenticate, (req,res) => {
     try{
-        const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
-
-        // Check if not authenticated
-        if(!claims) {
-            return res.status(401).send({
-                message: "unauthenticated"
-            })
-        }
+        const claims = req.user;
 
         // Get current date
         let today = new Date();
@@ -457,23 +394,15 @@ router.post('/answer', (req,res) => {
             mesage: "Successful"
         })
     }catch{
-        return res.status(401).send({
-            message: "unauthenticated"
+        return res.status(500).send({
+            message: "Internal Server Error"
         })
     }
 });
 
-router.post('/question', (req,res) => {
+router.post('/question', authenticate, (req,res) => {
     try{
-        const cookie = req.cookies['jwt'];
-        const claims = jwt.verify(cookie, process.env.JWT_SECRET);
-
-        // Check if not authenticated
-        if(!claims) {
-            return res.status(401).send({
-                message: "unauthenticated"
-            })
-        }
+        const claims = req.user;
 
         // Get current date
         let today = new Date();
@@ -500,9 +429,10 @@ router.post('/question', (req,res) => {
             mesage: "Successful"
         })
     }catch{
-        return res.status(401).send({
-            message: "unauthenticated"
+        return res.status(500).send({
+            message: "Internal Server Error"
         })
     }
 });
+
 export default router;

@@ -9,7 +9,6 @@ app.use(cookieParser());
 
 const allowedOrigins = [
     "https://your-production-domain.com",
-    "https://admin.your-domain.com",
     "http://localhost:8080" // Keep for local development
 ];
 

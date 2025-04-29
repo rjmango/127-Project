@@ -117,17 +117,17 @@
       if (this.editMode) {
         document.querySelector('.edit-profile-btn').innerText = 'Save Changes';
       } else {
-        const edited = {
-          firstName: this.firstName,
-          lastName: this.lastName
-        };
-        axios.post("http://localhost:3000/edit", edited, {withCredentials: true}).then( result => {
-          console.log(result.data);
-        }).catch(error => {
-          console.error(error)
-        });
-        document.querySelector('.edit-profile-btn').innerText = 'Edit Profile';
-      }
+          const edited = {
+            firstName: this.firstName,
+            lastName: this.lastName
+          };
+          axios.post("http://localhost:3000/edit", edited, {withCredentials: true}).then( result => {
+            console.log(result.data);
+          }).catch(error => {
+            console.error(error)
+          });
+          document.querySelector('.edit-profile-btn').innerText = 'Edit Profile';
+        }
       },
       deleteProfile() {
         axios.delete('http://localhost:3000/user', { withCredentials: true }).then( async (result) => {
@@ -168,7 +168,7 @@
               this.userQuestions = result.data;
           }).catch((error) => {
               console.log(error)
-          })
+          });
         }else{
           const id = this.$route.params.id;
           axios.get(`http://localhost:3000/user/${id}`, {withCredentials: true}).then((result) => {
