@@ -18,11 +18,7 @@ git clone https://github.com/yourusername/anon-qa-app.git
 cd anon-qa-app
 
 # 2. Install dependencies
-# (client)
-npm install --prefix /client
-
-# (server)
-npm install --prefix /server
+npm install
 
 # 3. Setup environment
 cp client/.env.example client/.env
@@ -31,9 +27,9 @@ cp server/.env.example server/.env
 
 # 4. Run development servers
 # (On your terminal)
-npm start client
+npm run client
 
 # (On a separate terminal)
-npm start server
+npm run server
 
 # Note: make sure both terminals are in the root directory of the project.
