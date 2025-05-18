@@ -14,8 +14,8 @@ A social platform where users can:
 
 ```bash
 # 1. Clone repo
-git clone https://github.com/yourusername/anon-qa-app.git
-cd anon-qa-app
+git clone https://github.com/rjmango/127-Project.git
+cd 127-Project
 
 # 2. Install dependencies
 npm install
